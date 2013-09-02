@@ -108,7 +108,7 @@ public class DataCollectionService extends Service implements SensorEventListene
 		JSONArray entries = new JSONArray();
 
 		JSONArray values;
-		for (Map.Entry<Long, float[]> entry : mPressureValues.entrySet()) {
+		for (Map.Entry<Long, float[]> entry : map.entrySet()) {
 			values = new JSONArray();
 			values.put(entry.getKey());
 			values.put(entry.getValue()[0]);
