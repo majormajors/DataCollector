@@ -8,7 +8,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.Binder;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
@@ -25,7 +24,6 @@ public class DataCollectionService extends Service implements SensorEventListene
 
 	public static boolean isRunning = false;
 
-	private final DataCollectionBinder mBinder = new DataCollectionBinder();
 	private NotificationManager mNotifcationManager;
 	private SensorManager mSensorManager;
 
@@ -37,9 +35,7 @@ public class DataCollectionService extends Service implements SensorEventListene
 	private Sensor mTemperature;
 
 	private long mStartMillis;
-	private long mEndMillis;
 	private Date mStartTime;
-	private Date mEndTime;
 
 	private SortedMap<Long, float[]> mPressureValues = new TreeMap<Long, float[]>();
 	private SortedMap<Long, float[]> mHumidityValues = new TreeMap<Long, float[]>();
@@ -121,8 +117,6 @@ public class DataCollectionService extends Service implements SensorEventListene
 	}
 
 	private void stopCollecting() {
-		mEndMillis = System.currentTimeMillis();
-		mEndTime = Calendar.getInstance().getTime();
 		mSensorManager.unregisterListener(this);
 		dumpSensorData();
 
@@ -138,7 +132,7 @@ public class DataCollectionService extends Service implements SensorEventListene
 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
-		long millis = System.currentTimeMillis();
+		long millis = System.currentTimeMillis() - mStartMillis;
 
 		switch (event.sensor.getType()) {
 			case Sensor.TYPE_PRESSURE:
@@ -166,11 +160,5 @@ public class DataCollectionService extends Service implements SensorEventListene
 
 	@Override
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
-	}
-
-	private class DataCollectionBinder extends Binder {
-		DataCollectionService getService() {
-			return DataCollectionService.this;
-		}
 	}
 }
