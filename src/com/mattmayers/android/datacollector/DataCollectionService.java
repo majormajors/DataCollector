@@ -77,11 +77,13 @@ public class DataCollectionService extends Service implements SensorEventListene
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		if (intent == null || intent.getBooleanExtra(EXTRA_SENSOR_SWITCH, true))
+		if (intent == null || intent.getBooleanExtra(EXTRA_SENSOR_SWITCH, true)) {
 			startCollecting();
-		else
+			return START_STICKY;
+		} else {
 			stopCollecting();
-		return START_STICKY;
+			return START_NOT_STICKY;
+		}
 	}
 
 	private void dumpSensorData() throws JSONException, IOException {
