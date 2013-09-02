@@ -16,7 +16,7 @@ public class MainActivity extends Activity {
 	private Button mStop;
 	private TextView mStatus;
 
-	private long mStartTime = 0L;
+	private long mStartTime;
 
 	private BroadcastReceiver mServiceStartedReceiver;
 

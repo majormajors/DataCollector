@@ -11,12 +11,20 @@ import android.hardware.SensorManager;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.*;
+import java.text.DateFormat;
 import java.util.*;
 
 public class DataCollectionService extends Service implements SensorEventListener {
 	private static final String TAG = DataCollectionService.class.getName();
+	private static final String BASE_DIR = "/sdcard/DataCollector";
 	private static final int NOTIFICATION_ID = 1000;
+
+	private static final DateFormat DATE_FORMAT = DateFormat.getDateTimeInstance();
 
 	public static final String EXTRA_SENSOR_SWITCH = "com.mattmayers.android.datacollector.EXTRA_SENSOR_SWITCH";
 	public static final String ACTION_SERVICE_STARTED = "com.mattmayers.android.datacollector.ACTION_SERVICE_STARTED";
@@ -34,8 +42,11 @@ public class DataCollectionService extends Service implements SensorEventListene
 	private Sensor mGyroscope;
 	private Sensor mTemperature;
 
+	private float mPressureAGL;
 	private long mStartMillis;
+
 	private Date mStartTime;
+	private Date mEndTime;
 
 	private SortedMap<Long, float[]> mPressureValues = new TreeMap<Long, float[]>();
 	private SortedMap<Long, float[]> mHumidityValues = new TreeMap<Long, float[]>();
@@ -73,7 +84,18 @@ public class DataCollectionService extends Service implements SensorEventListene
 		return START_STICKY;
 	}
 
-	private void dumpSensorData() {
+	private void dumpSensorData() throws JSONException, IOException {
+		JSONObject json = new JSONObject();
+		json.put("startTime", DATE_FORMAT.format(mStartTime));
+		json.put("endTime", DATE_FORMAT.format(mEndTime));
+		json.put("barometer", buildJSON(mPressureValues));
+		json.put("accelerometer", buildJSON(mAccelerometerValues));
+		json.put("humidity", buildJSON(mHumidityValues));
+		json.put("magnetometer", buildJSON(mMagnetometerValues));
+		json.put("gyroscope", buildJSON(mGyroscopeValues));
+		json.put("temperature", buildJSON(mTemperatureValues));
+		writeFile(json);
+
 		mPressureValues.clear();
 		mAccelerometerValues.clear();
 		mHumidityValues.clear();
@@ -82,7 +104,34 @@ public class DataCollectionService extends Service implements SensorEventListene
 		mTemperatureValues.clear();
 	}
 
+	private JSONArray buildJSON(SortedMap<Long, float[]> map) throws JSONException {
+		JSONArray entries = new JSONArray();
+
+		JSONArray values;
+		for (Map.Entry<Long, float[]> entry : mPressureValues.entrySet()) {
+			values = new JSONArray();
+			values.put(entry.getKey());
+			values.put(entry.getValue()[0]);
+			values.put(entry.getValue()[1]);
+			values.put(entry.getValue()[2]);
+			entries.put(values);
+		}
+
+		return entries;
+	}
+
+	private void writeFile(JSONObject json) throws IOException, JSONException {
+		new File(BASE_DIR).mkdirs();
+		String fileName = String.format("%s.json", DATE_FORMAT.format(mStartTime));
+		FileWriter writer = new FileWriter(
+				String.format("%s/%s", BASE_DIR, fileName), false);
+		writer.write(json.toString(4));
+		writer.close();
+	}
+
 	private void startCollecting() {
+		setPressureAGL();
+
 		mStartMillis = System.currentTimeMillis();
 		mStartTime = Calendar.getInstance().getTime();
 
@@ -118,7 +167,14 @@ public class DataCollectionService extends Service implements SensorEventListene
 
 	private void stopCollecting() {
 		mSensorManager.unregisterListener(this);
-		dumpSensorData();
+		mEndTime = Calendar.getInstance().getTime();
+		try {
+			dumpSensorData();
+		} catch (JSONException e) {
+			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+		} catch (IOException e) {
+			e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+		}
 
 		synchronized (this) {
 			DataCollectionService.isRunning = false;
@@ -128,6 +184,32 @@ public class DataCollectionService extends Service implements SensorEventListene
 
 		sendBroadcast(new Intent(ACTION_SERVICE_STOPPED));
 		stopSelf();
+	}
+
+	private void setPressureAGL() {
+		final List<Float> samples = new ArrayList<Float>(30);
+
+		mSensorManager.registerListener(new SensorEventListener() {
+			@Override
+			public void onSensorChanged(SensorEvent event) {
+				if (samples.size() < 30) {
+					samples.add(event.values[0]);
+				} else {
+					mSensorManager.unregisterListener(this);
+					float sum = 0f;
+					for (float value : samples) {
+						sum += value;
+						mPressureAGL = sum / samples.size();
+					}
+
+//					Log.d(TAG, String.format("mPressureAGL = %f", mPressureAGL));
+				}
+			}
+
+			@Override
+			public void onAccuracyChanged(Sensor sensor, int accuracy) {
+			}
+		}, mPressure, SensorManager.SENSOR_DELAY_FASTEST);
 	}
 
 	@Override
@@ -155,7 +237,7 @@ public class DataCollectionService extends Service implements SensorEventListene
 				break;
 		}
 
-		Log.d(TAG, String.format("%s: %s", event.sensor.getName(), Arrays.toString(event.values)));
+//		Log.d(TAG, String.format("%s: %s", event.sensor.getName(), Arrays.toString(event.values)));
 	}
 
 	@Override
