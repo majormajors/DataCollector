@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent">
+
+    <TextView
+        android:layout_height="0dp"
+        android:layout_width="fill_parent"
+        android:layout_weight="0.8"
+        android:id="@+id/status"
+        android:textAlignment="gravity"
+        android:textAppearance="@android:style/TextAppearance.Holo"
+        android:textSize="75sp"
+        android:text=""
+        android:gravity="center"/>
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.2"
+        android:gravity="bottom">
+
+        <Button
+            android:id="@+id/start"
+            android:text="Start"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/stop"
+            android:text="Stop"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:enabled="false" />
+
+    </LinearLayout>
+
+</LinearLayout>
+
