@@ -130,7 +130,8 @@ public class DataCollectionService extends Service implements SensorEventListene
 	}
 
 	private void startCollecting() {
-		setPressureAGL();
+		if (mPressure != null)
+			setPressureAGL();
 
 		mStartMillis = System.currentTimeMillis();
 		mStartTime = Calendar.getInstance().getTime();
