@@ -18,7 +18,7 @@
     <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="0dp"
-        android:layout_weight="0.2"
+        android:layout_weight="0.1"
         android:gravity="bottom">
 
         <Button
@@ -37,6 +37,14 @@
             android:enabled="false" />
 
     </LinearLayout>
+
+    <Button
+        android:id="@+id/link_dropbox"
+        android:layout_width="fill_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.1"
+        android:text="@string/link_dropbox"
+        android:visibility="visible" />
 
 </LinearLayout>
 

@@ -11,6 +11,11 @@ import android.hardware.SensorManager;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import android.widget.Toast;
+import com.dropbox.sync.android.DbxAccountManager;
+import com.dropbox.sync.android.DbxFile;
+import com.dropbox.sync.android.DbxFileSystem;
+import com.dropbox.sync.android.DbxPath;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -55,6 +60,8 @@ public class DataCollectionService extends Service implements SensorEventListene
 	private SortedMap<Long, float[]> mGyroscopeValues = new TreeMap<Long, float[]>();
 	private SortedMap<Long, float[]> mTemperatureValues = new TreeMap<Long, float[]>();
 
+	private DbxAccountManager mDbxAccountManager;
+
 	@Override
 	public IBinder onBind(Intent intent) {
 		return null;
@@ -73,6 +80,10 @@ public class DataCollectionService extends Service implements SensorEventListene
 		mMagnetometer = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 		mGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 		mTemperature = mSensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
+
+		String dropboxKey = getString(R.string.dropbox_key);
+		String dropboxSecret = getString(R.string.dropbox_secret);
+		mDbxAccountManager = DbxAccountManager.getInstance(getApplicationContext(), dropboxKey, dropboxSecret);
 	}
 
 	@Override
@@ -96,7 +107,7 @@ public class DataCollectionService extends Service implements SensorEventListene
 		json.put("magnetometer", buildJSON(mMagnetometerValues));
 		json.put("gyroscope", buildJSON(mGyroscopeValues));
 		json.put("temperature", buildJSON(mTemperatureValues));
-		writeFile(json);
+		writeFile(json.toString(2));
 
 		mPressureValues.clear();
 		mAccelerometerValues.clear();
@@ -122,13 +133,26 @@ public class DataCollectionService extends Service implements SensorEventListene
 		return entries;
 	}
 
-	private void writeFile(JSONObject json) throws IOException, JSONException {
-		new File(BASE_DIR).mkdirs();
+	private void writeFile(String data) throws IOException, JSONException {
 		String fileName = String.format("%s.json", DATE_FORMAT.format(mStartTime));
-		FileWriter writer = new FileWriter(
-				String.format("%s/%s", BASE_DIR, fileName), false);
-		writer.write(json.toString(4));
-		writer.close();
+
+		if (mDbxAccountManager.hasLinkedAccount()) {
+			DbxFileSystem dbxFs = DbxFileSystem.forAccount(mDbxAccountManager.getLinkedAccount());
+			DbxFile dbxFile = dbxFs.create(new DbxPath(fileName));
+			try {
+				dbxFile.writeString(data);
+			} finally {
+				dbxFile.close();
+			}
+		} else {
+			Toast.makeText(this, R.string.storing_files_to_sd, Toast.LENGTH_SHORT).show();
+
+			new File(BASE_DIR).mkdirs();
+			FileWriter writer = new FileWriter(
+					String.format("%s/%s", BASE_DIR, fileName), false);
+			writer.write(data);
+			writer.close();
+		}
 	}
 
 	private void startCollecting() {
@@ -218,25 +242,26 @@ public class DataCollectionService extends Service implements SensorEventListene
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		long millis = System.currentTimeMillis() - mStartMillis;
+		float[] values = { event.values[0], event.values[1], event.values[2] };
 
 		switch (event.sensor.getType()) {
 			case Sensor.TYPE_PRESSURE:
-				mPressureValues.put(millis, event.values);
+				mPressureValues.put(millis, values);
 				break;
 			case Sensor.TYPE_ACCELEROMETER:
-				mAccelerometerValues.put(millis, event.values);
+				mAccelerometerValues.put(millis, values);
 				break;
 			case Sensor.TYPE_RELATIVE_HUMIDITY:
-				mHumidityValues.put(millis, event.values);
+				mHumidityValues.put(millis, values);
 				break;
 			case Sensor.TYPE_MAGNETIC_FIELD:
-				mMagnetometerValues.put(millis, event.values);
+				mMagnetometerValues.put(millis, values);
 				break;
 			case Sensor.TYPE_GYROSCOPE:
-				mGyroscopeValues.put(millis, event.values);
+				mGyroscopeValues.put(millis, values);
 				break;
 			case Sensor.TYPE_AMBIENT_TEMPERATURE:
-				mTemperatureValues.put(millis, event.values);
+				mTemperatureValues.put(millis, values);
 				break;
 		}
 
