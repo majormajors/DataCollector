@@ -1,16 +1,16 @@
 package com.mattmayers.android.datacollector;
 
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import com.dropbox.sync.android.DbxAccountManager;
+import com.mattmayers.android.datacollector.events.AltitudeChangedEvent;
+import com.mattmayers.android.datacollector.events.ServiceStateChangeEvent;
+import com.squareup.otto.Subscribe;
 
 public class MainActivity extends Activity {
 	private static final int REQUEST_LINK_TO_DROPBOX = 0;
@@ -20,21 +20,12 @@ public class MainActivity extends Activity {
 	private Button mLinkDropbox;
 	private TextView mStatus;
 
-	private BroadcastReceiver mServiceStartedReceiver;
-
 	private DbxAccountManager mDbxAccountManager;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
-
-		mServiceStartedReceiver = new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				updateUI();
-			}
-		};
 
 		mStatus = (TextView) findViewById(R.id.status);
 		mStart = (Button) findViewById(R.id.start);
@@ -70,16 +61,18 @@ public class MainActivity extends Activity {
 		super.onResume();
 
 		updateUI();
-		registerReceiver(mServiceStartedReceiver,
-				new IntentFilter(DataCollectionService.ACTION_SERVICE_STARTED));
-		registerReceiver(mServiceStartedReceiver,
-				new IntentFilter(DataCollectionService.ACTION_SERVICE_STOPPED));
+		BusDriver.getBus().register(this);
 	}
 
 	@Override
 	public void onPause() {
 		super.onPause();
-		unregisterReceiver(mServiceStartedReceiver);
+
+		try {
+			BusDriver.getBus().unregister(this);
+		} catch (Exception e) {
+			// Nothing
+		}
 	}
 
 	@Override
@@ -101,6 +94,16 @@ public class MainActivity extends Activity {
 		Intent intent = new Intent(this, DataCollectionService.class);
 		intent.putExtra(DataCollectionService.EXTRA_SENSOR_SWITCH, false);
 		startService(intent);
+	}
+
+	@Subscribe
+	public void onServiceStateChanged(ServiceStateChangeEvent event) {
+		updateUI();
+	}
+
+	@Subscribe
+	public void onAltitudeChanged(AltitudeChangedEvent event) {
+		float altitude = event.getAltitude();
 	}
 
 	public void updateUI() {

@@ -10,17 +10,19 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
-import android.util.Log;
 import android.widget.Toast;
 import com.dropbox.sync.android.DbxAccountManager;
 import com.dropbox.sync.android.DbxFile;
 import com.dropbox.sync.android.DbxFileSystem;
 import com.dropbox.sync.android.DbxPath;
+import com.mattmayers.android.datacollector.events.ServiceStateChangeEvent;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.DateFormat;
 import java.util.*;
 
@@ -189,7 +191,7 @@ public class DataCollectionService extends Service implements SensorEventListene
 		builder.setContentIntent(pendingIntent);
 		mNotifcationManager.notify(NOTIFICATION_ID, builder.build());
 
-		sendBroadcast(new Intent(ACTION_SERVICE_STARTED));
+		ServiceStateChangeEvent.post(ServiceStateChangeEvent.State.STARTED);
 	}
 
 	private void stopCollecting() {
@@ -209,7 +211,7 @@ public class DataCollectionService extends Service implements SensorEventListene
 
 		mNotifcationManager.cancel(NOTIFICATION_ID);
 
-		sendBroadcast(new Intent(ACTION_SERVICE_STOPPED));
+		ServiceStateChangeEvent.post(ServiceStateChangeEvent.State.STOPPED);
 		stopSelf();
 	}
 
