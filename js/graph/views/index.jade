@@ -1,0 +1,41 @@
+extends layout
+
+block content
+  #graph
+
+block js
+  script(type='text/javascript').
+    var pressure_data = !{JSON.stringify(pressure_data)}
+    var altitude_data = !{JSON.stringify(altitude_data)}
+
+    var graph = new Rickshaw.Graph({
+      element: document.querySelector("#graph"),
+      width: 3000,
+      height: 800,
+      renderer: 'line',
+      series: [{
+        color: 'steelblue',
+        data: pressure_data
+      },
+      {
+        color: 'lightblue',
+        data: altitude_data
+      }]
+    });
+    graph.render();
+
+    var hoverDetail = new Rickshaw.Graph.HoverDetail({
+      graph: graph,
+      xFormatter: function(x) { return "Minutes: " + x / 60.0 },
+    });
+
+    var time = new Rickshaw.Fixtures.Time();
+    var minutes = time.unit('minute');
+
+    var xAxis = new Rickshaw.Graph.Axis.Time({
+        graph: graph,
+        timeUnit: minutes 
+    });
+
+    xAxis.render();
+
