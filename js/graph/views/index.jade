@@ -15,11 +15,13 @@ block js
       renderer: 'line',
       series: [{
         color: 'steelblue',
-        data: pressure_data
+        data: pressure_data,
+        name: "Pressure (100s mbar)"
       },
       {
         color: 'lightblue',
-        data: altitude_data
+        data: altitude_data,
+        name: "Altitude (1000s ft)"
       }]
     });
     graph.render();
