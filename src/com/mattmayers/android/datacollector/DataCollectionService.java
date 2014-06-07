@@ -35,7 +35,7 @@ public class DataCollectionService extends Service {
     private static final DateFormat DATE_FORMAT = DateFormat.getDateTimeInstance();
     public static final String EXTRA_SENSOR_SWITCH = "EXTRA_SENSOR_SWITCH";
 
-    public static boolean isRunning = false;
+    private State mState = State.STOPPED;
 
     private NotificationManager mNotifcationManager;
     private ReadingProvider mProvider;
@@ -75,10 +75,6 @@ public class DataCollectionService extends Service {
 
             @Override
             public void onStart() {
-                synchronized (DataCollectionService.this) {
-                    DataCollectionService.isRunning = true;
-                }
-
                 NotificationCompat.Builder builder = new NotificationCompat.Builder(DataCollectionService.this)
                         .setSmallIcon(android.R.drawable.ic_menu_info_details)
                         .setContentTitle(getString(R.string.app_name))
@@ -89,7 +85,8 @@ public class DataCollectionService extends Service {
                 builder.setContentIntent(pendingIntent);
                 mNotifcationManager.notify(NOTIFICATION_ID, builder.getNotification());
 
-                ServiceStateChangeEvent.post(ServiceStateChangeEvent.State.STARTED);
+                mState = State.RUNNING;
+                ServiceStateChangeEvent.post(mState);
             }
 
             @Override
@@ -102,12 +99,10 @@ public class DataCollectionService extends Service {
                     e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                 }
 
-                synchronized (DataCollectionService.this) {
-                    DataCollectionService.isRunning = false;
-                }
-
                 mNotifcationManager.cancel(NOTIFICATION_ID);
-                ServiceStateChangeEvent.post(ServiceStateChangeEvent.State.STOPPED);
+
+                mState = State.STOPPED;
+                ServiceStateChangeEvent.post(mState);
                 stopSelf();
             }
         });
@@ -170,5 +165,10 @@ public class DataCollectionService extends Service {
             writer.write(data);
             writer.close();
         }
+    }
+
+    public static enum State {
+        RUNNING,
+        STOPPED
     }
 }

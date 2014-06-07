@@ -14,11 +14,15 @@ import com.squareup.otto.Subscribe;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_LINK_TO_DROPBOX = 0;
+    private static final int CHOOSE_A_FILE = 1;
 
     private Button mStart;
     private Button mStop;
     private Button mLinkDropbox;
     private TextView mStatus;
+
+    private DataCollectionService.State mServiceState = DataCollectionService.State.STOPPED;
+    private Long mAltitudeFeet;
 
     private DbxAccountManager mDbxAccountManager;
 
@@ -79,6 +83,8 @@ public class MainActivity extends Activity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_LINK_TO_DROPBOX) {
             updateUI();
+        } else if (requestCode == CHOOSE_A_FILE) {
+            // DO A THING
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
@@ -98,20 +104,25 @@ public class MainActivity extends Activity {
 
     @Subscribe
     public void onServiceStateChanged(ServiceStateChangeEvent event) {
+        mServiceState = event.getState();
         updateUI();
     }
 
     @Subscribe
     public void onAltitudeChanged(AltitudeChangedEvent event) {
-        long altitude = Math.round(event.getReading().altitude.feet() / 10) * 10;
-        mStatus.setText(String.valueOf(altitude));
+        mAltitudeFeet = Math.round(event.getReading().altitude.feet());
+        updateUI();
     }
 
-    public void updateUI() {
-        if (DataCollectionService.isRunning) {
+    private void updateUI() {
+        if (isRunning()) {
             mStart.setEnabled(false);
             mStop.setEnabled(true);
-            mStatus.setText(R.string.running);
+            if (mAltitudeFeet == null) {
+                mStatus.setText(R.string.running);
+            } else {
+                mStatus.setText(String.valueOf(mAltitudeFeet));
+            }
             mStatus.setTextColor(Color.GREEN);
             mLinkDropbox.setVisibility(View.GONE);
         } else {
@@ -126,5 +137,9 @@ public class MainActivity extends Activity {
                 mLinkDropbox.setVisibility(View.VISIBLE);
             }
         }
+    }
+
+    private boolean isRunning() {
+        return mServiceState == DataCollectionService.State.RUNNING;
     }
 }

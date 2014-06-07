@@ -1,24 +1,20 @@
 package com.mattmayers.android.datacollector.events;
 
 import com.mattmayers.android.datacollector.BusDriver;
+import com.mattmayers.android.datacollector.DataCollectionService;
 
 public class ServiceStateChangeEvent {
-	final private State mState;
+    final private DataCollectionService.State mState;
 
-	public ServiceStateChangeEvent(State state) {
-		mState = state;
-	}
+    public ServiceStateChangeEvent(DataCollectionService.State state) {
+        mState = state;
+    }
 
-	public State getState() {
-		return mState;
-	}
+    public DataCollectionService.State getState() {
+        return mState;
+    }
 
-	public static void post(State state) {
-		BusDriver.getBus().post(new ServiceStateChangeEvent(state));
-	}
-
-	public static enum State {
-		STARTED,
-		STOPPED
-	}
+    public static void post(DataCollectionService.State state) {
+        BusDriver.getBus().post(new ServiceStateChangeEvent(state));
+    }
 }
