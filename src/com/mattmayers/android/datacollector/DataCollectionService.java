@@ -123,15 +123,14 @@ public class DataCollectionService extends Service {
         JSONObject json = new JSONObject();
         json.put("start_time", DATE_FORMAT.format(mProvider.getStartTime()));
         json.put("end_time", DATE_FORMAT.format(mProvider.getStopTime()));
-        json.put("start_millis", mProvider.getStartMillis());
         json.put("base_reading", mProvider.getBaseReading().pressure);
-        json.put("barometer", buildJSON(mProvider.getReadings()));
+        json.put("barometer", buildJSONArray(mProvider.getReadings()));
         writeFile(json.toString(2));
 
         mProvider.clearData();
     }
 
-    private JSONArray buildJSON(List<Reading> readings) throws JSONException {
+    private JSONArray buildJSONArray(List<Reading> readings) throws JSONException {
         JSONArray entries = new JSONArray();
 
         JSONArray values;

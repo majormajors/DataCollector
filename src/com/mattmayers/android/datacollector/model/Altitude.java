@@ -4,7 +4,7 @@ package com.mattmayers.android.datacollector.model;
  * Created by matt on 6/6/14.
  */
 public class Altitude {
-    private static final double METERS_IN_A_FOOT = 3.28084;
+    private static final double FEET_IN_A_METER = 3.28084;
 
     private double altitudeInMeters;
 
@@ -24,11 +24,11 @@ public class Altitude {
     }
 
     private static double feetToMeters(double feet) {
-        return feet / METERS_IN_A_FOOT;
+        return feet / FEET_IN_A_METER;
     }
 
     private static double metersToFeet(double meters) {
-        return meters * METERS_IN_A_FOOT;
+        return meters * FEET_IN_A_METER;
     }
 
     public double meters() {
