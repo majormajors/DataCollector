@@ -29,3 +29,7 @@ proguard/
 .idea/
 
 /res/values/secret_strings.xml
+
+.DS_Store
+/.gradle
+/build

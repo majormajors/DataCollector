@@ -13,117 +13,118 @@ import com.mattmayers.android.datacollector.events.ServiceStateChangeEvent;
 import com.squareup.otto.Subscribe;
 
 public class MainActivity extends Activity {
-	private static final int REQUEST_LINK_TO_DROPBOX = 0;
+    private static final int REQUEST_LINK_TO_DROPBOX = 0;
 
-	private Button mStart;
-	private Button mStop;
-	private Button mLinkDropbox;
-	private TextView mStatus;
+    private Button mStart;
+    private Button mStop;
+    private Button mLinkDropbox;
+    private TextView mStatus;
 
-	private DbxAccountManager mDbxAccountManager;
+    private DbxAccountManager mDbxAccountManager;
 
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.main);
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.main);
 
-		mStatus = (TextView) findViewById(R.id.status);
-		mStart = (Button) findViewById(R.id.start);
-		mStop = (Button) findViewById(R.id.stop);
-		mLinkDropbox = (Button) findViewById(R.id.link_dropbox);
+        mStatus = (TextView) findViewById(R.id.status);
+        mStart = (Button) findViewById(R.id.start);
+        mStop = (Button) findViewById(R.id.stop);
+        mLinkDropbox = (Button) findViewById(R.id.link_dropbox);
 
-		mStart.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				startCollection();
-			}
-		});
-		mStop.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				stopCollection();
-			}
-		});
-		mLinkDropbox.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				mDbxAccountManager.startLink(MainActivity.this, REQUEST_LINK_TO_DROPBOX);
-			}
-		});
+        mStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startCollection();
+            }
+        });
+        mStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stopCollection();
+            }
+        });
+        mLinkDropbox.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mDbxAccountManager.startLink(MainActivity.this, REQUEST_LINK_TO_DROPBOX);
+            }
+        });
 
-		String dropboxKey = getString(R.string.dropbox_key);
-		String dropboxSecret = getString(R.string.dropbox_secret);
-		mDbxAccountManager = DbxAccountManager.getInstance(getApplicationContext(), dropboxKey, dropboxSecret);
-	}
+        String dropboxKey = getString(R.string.dropbox_key);
+        String dropboxSecret = getString(R.string.dropbox_secret);
+        mDbxAccountManager = DbxAccountManager.getInstance(getApplicationContext(), dropboxKey, dropboxSecret);
+    }
 
-	@Override
-	public void onResume() {
-		super.onResume();
+    @Override
+    public void onResume() {
+        super.onResume();
 
-		updateUI();
-		BusDriver.getBus().register(this);
-	}
+        updateUI();
+        BusDriver.getBus().register(this);
+    }
 
-	@Override
-	public void onPause() {
-		super.onPause();
+    @Override
+    public void onPause() {
+        super.onPause();
 
-		try {
-			BusDriver.getBus().unregister(this);
-		} catch (Exception e) {
-			// Nothing
-		}
-	}
+        try {
+            BusDriver.getBus().unregister(this);
+        } catch (Exception e) {
+            // Nothing
+        }
+    }
 
-	@Override
-	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-		if (requestCode == REQUEST_LINK_TO_DROPBOX) {
-			updateUI();
-		} else {
-			super.onActivityResult(requestCode, resultCode, data);
-		}
-	}
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_LINK_TO_DROPBOX) {
+            updateUI();
+        } else {
+            super.onActivityResult(requestCode, resultCode, data);
+        }
+    }
 
-	private void startCollection() {
-		Intent intent = new Intent(this, DataCollectionService.class);
-		intent.putExtra(DataCollectionService.EXTRA_SENSOR_SWITCH, true);
-		startService(intent);
-	}
+    private void startCollection() {
+        Intent intent = new Intent(this, DataCollectionService.class);
+        intent.putExtra(DataCollectionService.EXTRA_SENSOR_SWITCH, true);
+        startService(intent);
+    }
 
-	private void stopCollection() {
-		Intent intent = new Intent(this, DataCollectionService.class);
-		intent.putExtra(DataCollectionService.EXTRA_SENSOR_SWITCH, false);
-		startService(intent);
-	}
+    private void stopCollection() {
+        Intent intent = new Intent(this, DataCollectionService.class);
+        intent.putExtra(DataCollectionService.EXTRA_SENSOR_SWITCH, false);
+        startService(intent);
+    }
 
-	@Subscribe
-	public void onServiceStateChanged(ServiceStateChangeEvent event) {
-		updateUI();
-	}
+    @Subscribe
+    public void onServiceStateChanged(ServiceStateChangeEvent event) {
+        updateUI();
+    }
 
-	@Subscribe
-	public void onAltitudeChanged(AltitudeChangedEvent event) {
-		float altitude = event.getAltitude();
-	}
+    @Subscribe
+    public void onAltitudeChanged(AltitudeChangedEvent event) {
+        long altitude = Math.round(event.getReading().altitude.feet() / 10) * 10;
+        mStatus.setText(String.valueOf(altitude));
+    }
 
-	public void updateUI() {
-		if (DataCollectionService.isRunning) {
-			mStart.setEnabled(false);
-			mStop.setEnabled(true);
-			mStatus.setText(R.string.running);
-			mStatus.setTextColor(Color.GREEN);
-			mLinkDropbox.setVisibility(View.GONE);
-		} else {
-			mStart.setEnabled(true);
-			mStop.setEnabled(false);
-			mStatus.setText(R.string.stopped);
-			mStatus.setTextColor(Color.RED);
+    public void updateUI() {
+        if (DataCollectionService.isRunning) {
+            mStart.setEnabled(false);
+            mStop.setEnabled(true);
+            mStatus.setText(R.string.running);
+            mStatus.setTextColor(Color.GREEN);
+            mLinkDropbox.setVisibility(View.GONE);
+        } else {
+            mStart.setEnabled(true);
+            mStop.setEnabled(false);
+            mStatus.setText(R.string.stopped);
+            mStatus.setTextColor(Color.RED);
 
-			if (mDbxAccountManager.hasLinkedAccount()) {
-				mLinkDropbox.setVisibility(View.GONE);
-			} else {
-				mLinkDropbox.setVisibility(View.VISIBLE);
-			}
-		}
-	}
+            if (mDbxAccountManager.hasLinkedAccount()) {
+                mLinkDropbox.setVisibility(View.GONE);
+            } else {
+                mLinkDropbox.setVisibility(View.VISIBLE);
+            }
+        }
+    }
 }

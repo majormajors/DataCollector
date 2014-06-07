@@ -12,9 +12,9 @@ requirejs.config(
 
 altCoef = 1.0 / 5.255
 
-sumPressureData = (barometer) ->
+initPressureData = (barometer) ->
   data = []
-  data.push(x: v[0] / 1000.0, y: (v[1] + v[2] + v[3]) / 100.0) for v in barometer
+  data.push(x: v[0] / 1000.0, y: v[1] / 100.0) for v in barometer
   data
 
 calculateAltitudeChanged = (p0, p) ->
@@ -33,5 +33,5 @@ exports.index = (req, res) ->
 
     res.render "index",
       title: "Jump Graph"
-      pressure_data: sumPressureData(jump.barometer)
+      pressure_data: initPressureData(jump.barometer)
       altitude_data: calculateAltitudeData(jump.barometer)

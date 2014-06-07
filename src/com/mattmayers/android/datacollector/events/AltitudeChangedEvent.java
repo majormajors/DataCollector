@@ -1,19 +1,20 @@
 package com.mattmayers.android.datacollector.events;
 
 import com.mattmayers.android.datacollector.BusDriver;
+import com.mattmayers.android.datacollector.model.Reading;
 
 public class AltitudeChangedEvent {
-	final private float mAltitude;
+	final private Reading mReading;
 
-	public AltitudeChangedEvent(float altitude) {
-		mAltitude = altitude;
+	public AltitudeChangedEvent(Reading reading) {
+		mReading = reading;
 	}
 
-	public float getAltitude() {
-		return mAltitude;
+	public Reading getReading() {
+		return mReading;
 	}
 
-	public static void post(float altitude) {
-		BusDriver.getBus().post(new AltitudeChangedEvent(altitude));
+	public static void post(Reading reading) {
+		BusDriver.getBus().post(new AltitudeChangedEvent(reading));
 	}
 }

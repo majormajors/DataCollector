@@ -3,6 +3,6 @@
     <string name="app_name">Data Collector</string>
     <string name="running">Running</string>
     <string name="stopped">Stopped</string>
-    <string name="storing_files_to_sd">No dropbox account linked. Saving to SD storage...</string>
+    <string name="storing_files_to_sd">No Dropbox account linked. Saving to SD storage…</string>
     <string name="link_dropbox">Link Dropbox Account</string>
 </resources>
