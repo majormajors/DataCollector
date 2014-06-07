@@ -16,16 +16,20 @@ import java.util.Date;
  * Created by matt on 6/6/14.
  */
 public class SensorReadingProvider extends ReadingProvider {
-    private SensorManager mSensorManager;
-    private Sensor mPressure;
+    private final SensorManager mSensorManager;
+    private final Sensor mPressure;
 
     private long mStartMillis;
     private Date mStartTime;
     private Date mStopTime;
 
-    private SensorEventListener mSensorListener = new SensorEventListener() {
+    private final SensorEventListener mSensorListener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
+            if (event.sensor.getType() != Sensor.TYPE_PRESSURE) {
+                return;
+            }
+
             Reading reading = new Reading();
             reading.millis = System.currentTimeMillis() - mStartMillis;
             reading.pressure = event.values[0];
@@ -39,6 +43,8 @@ public class SensorReadingProvider extends ReadingProvider {
 
     public SensorReadingProvider(Context context) {
         super(context);
+        mSensorManager = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
+        mPressure = mSensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
     }
 
     @Override
@@ -52,11 +58,14 @@ public class SensorReadingProvider extends ReadingProvider {
     }
 
     @Override
+    public long getStartMillis() {
+        return mStartMillis;
+    }
+
+    @Override
     protected void onStart() {
         mStartTime = Calendar.getInstance().getTime();
         mStartMillis = System.currentTimeMillis();
-        mSensorManager = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
-        mPressure = mSensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
 
         mSensorManager.registerListener(new SensorEventListener() {
             private static final int READING_COUNT = 10;
@@ -65,12 +74,16 @@ public class SensorReadingProvider extends ReadingProvider {
 
             @Override
             public void onSensorChanged(SensorEvent event) {
-                if (i < READING_COUNT) {
+                if (event.sensor.getType() != Sensor.TYPE_PRESSURE) {
+                    return;
+                }
+
+                if (i++ < READING_COUNT) {
                     mSum += event.values[0];
                 } else {
                     mSensorManager.unregisterListener(this);
                     float average = mSum / READING_COUNT;
-                    setPressureAGL(new Reading(0, average, Altitude.meters(0.0)));
+                    setBaseReading(new Reading(0, average, Altitude.meters(0.0)));
                     onCalibrated();
                 }
             }

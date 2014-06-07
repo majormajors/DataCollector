@@ -5,4 +5,7 @@
     <string name="stopped">Stopped</string>
     <string name="storing_files_to_sd">No Dropbox account linked. Saving to SD storage…</string>
     <string name="link_dropbox">Link Dropbox Account</string>
+    <string name="dropbox_error">There was an error with Dropbox: %s</string>
+    <string name="no_files">No files</string>
+    <string name="cancel">Cancel</string>
 </resources>

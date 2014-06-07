@@ -11,7 +11,9 @@ import com.dropbox.sync.android.DbxAccountManager;
 import com.dropbox.sync.android.DbxFile;
 import com.dropbox.sync.android.DbxFileSystem;
 import com.dropbox.sync.android.DbxPath;
+import com.mattmayers.android.datacollector.events.AltitudeChangedEvent;
 import com.mattmayers.android.datacollector.events.ServiceStateChangeEvent;
+import com.mattmayers.android.datacollector.utils.DbxAccountManagerUtil;
 import com.mattmayers.android.datacollector.model.Reading;
 import com.mattmayers.android.datacollector.providers.ReadingProvider;
 import com.mattmayers.android.datacollector.providers.SensorReadingProvider;
@@ -40,6 +42,8 @@ public class DataCollectionService extends Service {
 
     private DbxAccountManager mDbxAccountManager;
 
+    private Reading mLastReading;
+
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -49,6 +53,9 @@ public class DataCollectionService extends Service {
     public void onCreate() {
         super.onCreate();
 
+        mNotifcationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        mDbxAccountManager = DbxAccountManagerUtil.getDbxAccountManager(this);
+
         if (mProvider == null) {
             mProvider = new SensorReadingProvider(this);
         }
@@ -56,42 +63,73 @@ public class DataCollectionService extends Service {
         mProvider.setOnReadingListener(new ReadingProvider.OnReadingListener() {
             @Override
             public void onReading(Reading reading) {
+                if (mLastReading != null) {
+                    double change = Math.abs(mLastReading.altitude.meters() - reading.altitude.meters());
+                    if (change > 1.0) {
+                        AltitudeChangedEvent.post(reading);
+                    }
+                }
 
+                mLastReading = reading;
             }
 
             @Override
             public void onStart() {
+                synchronized (DataCollectionService.this) {
+                    DataCollectionService.isRunning = true;
+                }
 
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(DataCollectionService.this)
+                        .setSmallIcon(android.R.drawable.ic_menu_info_details)
+                        .setContentTitle(getString(R.string.app_name))
+                        .setContentText(getString(R.string.running))
+                        .setOngoing(true);
+                PendingIntent pendingIntent = PendingIntent.getActivity(
+                        DataCollectionService.this, 0, new Intent(DataCollectionService.this, MainActivity.class), 0);
+                builder.setContentIntent(pendingIntent);
+                mNotifcationManager.notify(NOTIFICATION_ID, builder.getNotification());
+
+                ServiceStateChangeEvent.post(ServiceStateChangeEvent.State.STARTED);
             }
 
             @Override
             public void onStop() {
+                try {
+                    dumpSensorData();
+                } catch (JSONException e) {
+                    e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                } catch (IOException e) {
+                    e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                }
 
+                synchronized (DataCollectionService.this) {
+                    DataCollectionService.isRunning = false;
+                }
+
+                mNotifcationManager.cancel(NOTIFICATION_ID);
+                ServiceStateChangeEvent.post(ServiceStateChangeEvent.State.STOPPED);
+                stopSelf();
             }
         });
-
-        mNotifcationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
-        String dropboxKey = getString(R.string.dropbox_key);
-        String dropboxSecret = getString(R.string.dropbox_secret);
-        mDbxAccountManager = DbxAccountManager.getInstance(getApplicationContext(), dropboxKey, dropboxSecret);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null || intent.getBooleanExtra(EXTRA_SENSOR_SWITCH, true)) {
-            startCollecting();
+            mProvider.start();
             return START_STICKY;
         } else {
-            stopCollecting();
+            mProvider.stop();
             return START_NOT_STICKY;
         }
     }
 
     private void dumpSensorData() throws JSONException, IOException {
         JSONObject json = new JSONObject();
-        json.put("startTime", DATE_FORMAT.format(mProvider.getStartTime()));
-        json.put("endTime", DATE_FORMAT.format(mProvider.getStopTime()));
+        json.put("start_time", DATE_FORMAT.format(mProvider.getStartTime()));
+        json.put("end_time", DATE_FORMAT.format(mProvider.getStopTime()));
+        json.put("start_millis", mProvider.getStartMillis());
+        json.put("base_reading", mProvider.getBaseReading().pressure);
         json.put("barometer", buildJSON(mProvider.getReadings()));
         writeFile(json.toString(2));
 
@@ -133,87 +171,4 @@ public class DataCollectionService extends Service {
             writer.close();
         }
     }
-
-    private void startCollecting() {
-        mProvider.start();
-
-        synchronized (this) {
-            DataCollectionService.isRunning = true;
-        }
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
-                .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText(getString(R.string.running))
-                .setOngoing(true);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-                this, 0, new Intent(this, MainActivity.class), 0);
-        builder.setContentIntent(pendingIntent);
-        mNotifcationManager.notify(NOTIFICATION_ID, builder.getNotification());
-
-        ServiceStateChangeEvent.post(ServiceStateChangeEvent.State.STARTED);
-    }
-
-    private void stopCollecting() {
-        mProvider.stop();
-
-        try {
-            dumpSensorData();
-        } catch (JSONException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        } catch (IOException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        }
-
-        synchronized (this) {
-            DataCollectionService.isRunning = false;
-        }
-
-        mNotifcationManager.cancel(NOTIFICATION_ID);
-        ServiceStateChangeEvent.post(ServiceStateChangeEvent.State.STOPPED);
-        stopSelf();
-    }
-
-//    private void setPressureAGL() {
-//        final List<Float> samples = new ArrayList<Float>(10);
-//
-//        mSensorManager.registerListener(new SensorEventListener() {
-//            @Override
-//            public void onSensorChanged(SensorEvent event) {
-//                if (samples.size() < 10) {
-//                    samples.add(event.values[0]);
-//                } else {
-//                    mSensorManager.unregisterListener(this);
-//                    float sum = 0f;
-//                    for (float value : samples) {
-//                        sum += value;
-//                        mPressureAGL = sum / samples.size();
-//                    }
-//                }
-//            }
-//
-//            @Override
-//            public void onAccuracyChanged(Sensor sensor, int accuracy) {
-//            }
-//        }, mPressure, SensorManager.SENSOR_DELAY_FASTEST);
-//    }
-
-//    @Override
-//    public void onSensorChanged(SensorEvent event) {
-//        long millis = System.currentTimeMillis() - mStartMillis;
-//
-//        switch (event.sensor.getType()) {
-//            case Sensor.TYPE_PRESSURE:
-//                float pressure = event.values[0];
-//                mReadings.add(new Reading(millis, pressure));
-//                if (mPressureAGL > 0) {
-//                    AltitudeChangedEvent.post(getAltitudeInFeetAGL(pressure));
-//                }
-//                break;
-//        }
-//    }
-
-//    private float getAltitudeInFeetAGL(float value) {
-//        return SensorManager.getAltitude(mPressureAGL, value) * 3.281f;
-//    }
 }

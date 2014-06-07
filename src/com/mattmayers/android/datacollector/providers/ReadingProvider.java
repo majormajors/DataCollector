@@ -3,7 +3,6 @@ package com.mattmayers.android.datacollector.providers;
 import android.content.Context;
 import android.hardware.SensorManager;
 
-import com.mattmayers.android.datacollector.events.AltitudeChangedEvent;
 import com.mattmayers.android.datacollector.model.Altitude;
 import com.mattmayers.android.datacollector.model.Reading;
 
@@ -18,18 +17,20 @@ import java.util.List;
 public abstract class ReadingProvider {
     private Context mContext;
 
-    private Reading mPressureAGL;
+    private Reading mBaseReading;
     private List<Reading> mReadings;
     private OnReadingListener mListener;
 
     public abstract Date getStartTime();
     public abstract Date getStopTime();
+    public abstract long getStartMillis();
     protected abstract void onStart();
     protected abstract void onStop();
     protected abstract void onCalibrated();
 
     public ReadingProvider(Context context) {
         mContext = context.getApplicationContext();
+        mReadings = new ArrayList<>();
     }
 
     public Context getContext() {
@@ -37,12 +38,10 @@ public abstract class ReadingProvider {
     }
 
     protected void onReading(Reading reading) {
-        float altitude = SensorManager.getAltitude(getPressureAGL().pressure, reading.pressure);
+        float altitude = SensorManager.getAltitude(getBaseReading().pressure, reading.pressure);
         reading.altitude = Altitude.meters(altitude);
 
         mReadings.add(reading);
-
-        AltitudeChangedEvent.post(reading);
 
         if (mListener != null) {
             mListener.onReading(reading);
@@ -57,12 +56,12 @@ public abstract class ReadingProvider {
         mListener = listener;
     }
 
-    protected final void setPressureAGL(Reading reading) {
-        mPressureAGL = reading;
+    protected final void setBaseReading(Reading reading) {
+        mBaseReading = reading;
     }
 
-    public Reading getPressureAGL() {
-        return mPressureAGL;
+    public Reading getBaseReading() {
+        return mBaseReading;
     }
 
     public final void start() {
