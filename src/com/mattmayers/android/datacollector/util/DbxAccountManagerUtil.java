@@ -1,4 +1,4 @@
-package com.mattmayers.android.datacollector.utils;
+package com.mattmayers.android.datacollector.util;
 
 import android.content.Context;
 

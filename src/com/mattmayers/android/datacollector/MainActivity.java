@@ -8,8 +8,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import com.dropbox.sync.android.DbxAccountManager;
-import com.mattmayers.android.datacollector.events.AltitudeChangedEvent;
-import com.mattmayers.android.datacollector.events.ServiceStateChangeEvent;
+import com.mattmayers.android.datacollector.event.AltitudeChangedEvent;
+import com.mattmayers.android.datacollector.event.ServiceStateChangeEvent;
 import com.squareup.otto.Subscribe;
 
 public class MainActivity extends Activity {
@@ -39,13 +39,13 @@ public class MainActivity extends Activity {
         mStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startCollection();
+                toggleService();
             }
         });
         mStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                stopCollection();
+                toggleService();
             }
         });
         mLinkDropbox.setOnClickListener(new View.OnClickListener() {
@@ -75,31 +75,31 @@ public class MainActivity extends Activity {
         try {
             BusDriver.getBus().unregister(this);
         } catch (Exception e) {
-            // Nothing
+            // Do everything Jon Snow knows
         }
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_LINK_TO_DROPBOX) {
-            updateUI();
-        } else if (requestCode == CHOOSE_A_FILE) {
-            // DO A THING
-        } else {
-            super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case REQUEST_LINK_TO_DROPBOX:
+                updateUI();
+                break;
+            case CHOOSE_A_FILE:
+                // DO A THING
+                break;
+            default:
+                super.onActivityResult(requestCode, resultCode, data);
         }
     }
 
-    private void startCollection() {
+    private void toggleService() {
         Intent intent = new Intent(this, DataCollectionService.class);
-        intent.putExtra(DataCollectionService.EXTRA_SENSOR_SWITCH, true);
-        startService(intent);
-    }
-
-    private void stopCollection() {
-        Intent intent = new Intent(this, DataCollectionService.class);
-        intent.putExtra(DataCollectionService.EXTRA_SENSOR_SWITCH, false);
-        startService(intent);
+        if (!isRunning()) {
+            startService(intent);
+        } else {
+            stopService(intent);
+        }
     }
 
     @Subscribe
@@ -133,8 +133,10 @@ public class MainActivity extends Activity {
 
             if (mDbxAccountManager.hasLinkedAccount()) {
                 mLinkDropbox.setVisibility(View.GONE);
+                // TODO: show load file button
             } else {
                 mLinkDropbox.setVisibility(View.VISIBLE);
+                // TODO: hide load file button
             }
         }
     }

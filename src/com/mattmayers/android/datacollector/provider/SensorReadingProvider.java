@@ -1,4 +1,4 @@
-package com.mattmayers.android.datacollector.providers;
+package com.mattmayers.android.datacollector.provider;
 
 import android.content.Context;
 import android.hardware.Sensor;

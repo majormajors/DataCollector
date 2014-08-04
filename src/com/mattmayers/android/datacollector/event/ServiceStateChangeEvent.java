@@ -1,4 +1,4 @@
-package com.mattmayers.android.datacollector.events;
+package com.mattmayers.android.datacollector.event;
 
 import com.mattmayers.android.datacollector.BusDriver;
 import com.mattmayers.android.datacollector.DataCollectionService;

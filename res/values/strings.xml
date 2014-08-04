@@ -8,4 +8,6 @@
     <string name="dropbox_error">There was an error with Dropbox: %s</string>
     <string name="no_files">No files</string>
     <string name="cancel">Cancel</string>
+    <string name="serialization_error">Something went seriously wrong and the data couldn\'t be serialized.</string>
+    <string name="cant_load_file">Can\'t load file: %s</string>
 </resources>
